@@ -26,7 +26,19 @@
         }
         .form-group {
             margin-bottom: 20px;
+            padding: 15px;
+            background-color: #1a1a1a;
+            border-radius: 8px;
+            box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.5), 0 0 10px rgba(0, 153, 255, 0.3);
+            border: 1px solid #333;
+            transition: background-color 0.3s ease, box-shadow 0.3s ease;
         }
+
+        .form-group:hover {
+            background-color: #2a2a2a;
+            box-shadow: inset 0 0 15px rgba(0, 0, 0, 0.6), 0 0 15px rgba(0, 153, 255, 0.5);
+        }
+
         label {
             display: block;
             margin-bottom: 5px;
@@ -136,8 +148,8 @@
             box-shadow: 0 0 15px rgba(0, 153, 255, 0.7);
             border: 2px solid #444;
             border-radius: 10px;
-             background-color: #222;
-             padding: 5px;
+            background-color: #222;
+            padding: 5px;
         }
         .display-img img {
             width: 95%;
@@ -189,6 +201,10 @@
                 <hr>
             </div>
         </div>
+        <div class="form-group">
+            <label for="json-file">セッティングデータを読み込む</label>
+            <input type="file" id="json-file" accept=".json">
+        </div>
         <div class="results-group">
             <button id="add-song">曲を最後に追加</button>
             <button id="generate-json">ファイルを生成</button>
@@ -203,16 +219,85 @@
             addSong();
         });
 
-        // 曲を挿入する関数
-        function addSong(insertAfter = null) {
-            // 曲を追加する前に全曲の番号をリセット
-            resetSongNumbers();
+        // JSONファイル読み込みイベント
+        document.getElementById('json-file').addEventListener('change', function(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    try {
+                        const jsonData = JSON.parse(e.target.result);
+                        loadJsonData(jsonData);
+                    } catch (error) {
+                        alert('JSONファイルの読み込みに失敗しました。');
+                    }
+                };
+                reader.readAsText(file);
+            }
+        });
 
+        // JSONデータを適用する関数
+        function loadJsonData(data) {
+            // バンド名を設定
+            document.getElementById('band-name').value = data.name;
+
+            // 曲リストをクリア
+            document.getElementById('songs-container').innerHTML = '';
+
+            // 曲を追加
+            data.songs.forEach((song, index) => {
+                addSong(null, song, index + 1);
+            });
+
+            // 曲番号を再設定
+            resetSongNumbers();
+        }
+
+        // 曲を挿入する関数
+        function addSong(insertAfter = null, songData = null, songIndex = null) {
             songCount++;
             const songGroup = document.createElement('div');
             songGroup.classList.add('song-group');
             songGroup.id = `song-group-${songCount}`;
+            const songNumber = songIndex || songCount;
+            const title = songData ? songData.Title : '';
+            const detail = songData ? songData.detail : '';
+            const uses = songData ? songData.Uses : [];
+
+            if(songData){
+                
             songGroup.innerHTML = `
+                <h3>曲 ${songNumber}</h3>
+                <label for="song-title-${songNumber}">曲名</label>
+                <input type="text" id="song-title-${songNumber}" value="${title}" placeholder="曲名を入力してください">
+
+                <label>使用するパート</label>
+                <div class="checkbox-group">
+                    <div class="part-button ${uses.includes('Ba') ? 'selected' : ''}" data-part="Ba">Ba</div>
+                    <div class="part-button ${uses.includes('Mr') ? 'selected' : ''}" data-part="Mr">Mr</div>
+                    <div class="part-button ${uses.includes('Jc') ? 'selected' : ''}" data-part="Jc">Jc</div>
+                    <div class="part-button ${uses.includes('Dr') ? 'selected' : ''}" data-part="Dr">Dr</div>
+                    <div class="part-button ${uses.includes('EP') ? 'selected' : ''}" data-part="EP">EP</div>
+                    <div class="part-button ${uses.includes('Syn') ? 'selected' : ''}" data-part="Syn">Syn</div>
+                    <div class="part-button ${uses.includes('num1') ? 'selected' : ''}" data-part="num1">mic1</div>
+                    <div class="part-button ${uses.includes('num2') ? 'selected' : ''}" data-part="num2">mic2</div>
+                    <div class="part-button ${uses.includes('num3') ? 'selected' : ''}" data-part="num3">mic3</div>
+                    <div class="part-button ${uses.includes('num4') ? 'selected' : ''}" data-part="num4">mic4</div>
+                </div>
+
+                <label for="song-detail-${songNumber}">要望</label>
+                <textarea id="song-detail-${songNumber}" rows="3" placeholder="要望や詳細を入力してください">${detail}</textarea>
+
+                <div class="button-group">
+                    <button class="move-up">上に移動</button>
+                    <button class="move-down">下に移動</button>
+                    <button class="insert-song">曲を追加</button>
+                    <button class="remove-song">曲を削除</button>
+                </div>
+                <hr>
+            `;
+            }else{
+                songGroup.innerHTML = `
                 <h3>曲 ${songCount}</h3>
                 <label for="song-title-${songCount}">曲名</label>
                 <input type="text" id="song-title-${songCount}" placeholder="曲名を入力してください">
@@ -225,10 +310,10 @@
                     <div class="part-button selected" data-part="Dr">Dr</div>
                     <div class="part-button" data-part="EP">EP</div>
                     <div class="part-button" data-part="Syn">Syn</div>
-                    <div class="part-button" data-part="num1">mic1</div>
-                    <div class="part-button selected" data-part="num2">mic2</div>
-                    <div class="part-button" data-part="num3">mic3</div>
-                    <div class="part-button" data-part="num4">mic4</div>
+                    <div class="part-button" data-part="num1">マイク1</div>
+                    <div class="part-button selected" data-part="num2">マイク2</div>
+                    <div class="part-button" data-part="num3">マイク3</div>
+                    <div class="part-button" data-part="num4">マイク4</div>
                 </div>
 
                 <label for="song-detail-${songCount}">要望</label>
@@ -242,7 +327,7 @@
                 </div>
                 <hr>
             `;
-
+            }
             if (insertAfter) {
                 insertAfter.insertAdjacentElement('afterend', songGroup);
             } else {
@@ -254,9 +339,6 @@
             addRemoveSongEventListener(songGroup);
             addMoveEventListeners(songGroup);
             addInsertSongEventListener(songGroup);
-
-            // 曲番号を再設定
-            resetSongNumbers();
         }
 
         // パートボタンのクリックイベントを設定する関数
